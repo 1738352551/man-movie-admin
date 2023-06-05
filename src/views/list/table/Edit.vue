@@ -1,7 +1,6 @@
 <template>
   <div>
     <a-form :form="form" @submit="handleSubmit">
-
       <a-form-item
         :labelCol="labelCol"
         :wrapperCol="wrapperCol"

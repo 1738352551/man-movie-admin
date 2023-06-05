@@ -4,6 +4,7 @@ import { getCurrentUserNav } from '@/api/auth/user/user'
 // eslint-disable-next-line
 import { BasicLayout, BlankLayout, PageView, RouteView } from '@/layouts'
 import Analysis from '@/views/dashboard/Analysis'
+// import UserView from '@/views/user/User.vue'
 
 // 前端路由表 (基于动态)
 const constantRouterComponents = {
@@ -18,6 +19,7 @@ const constantRouterComponents = {
 
   // 你需要动态引入的页面组件
   Analysis: Analysis,
+  // UserView: () => import('@/views/user/User.vue'),
 
   // form
   BasicForm: () => import('@/views/form/basicForm'),
@@ -53,7 +55,7 @@ const constantRouterComponents = {
   BindingSettings: () => import('@/views/account/settings/Binding'),
   NotificationSettings: () => import('@/views/account/settings/Notification'),
 
-  MovieInfo: () => import('@/views/movie/movieInfo/MovieInfo.vue')
+  MovieInfo: () => import('@/views/movie/info/MovieInfo.vue')
 
   // 'TestWork': () => import(/* webpackChunkName: "TestWork" */ '@/views/dashboard/TestWork')
 }
@@ -71,7 +73,7 @@ const rootRouter = {
   name: 'index',
   path: '',
   component: 'BasicLayout',
-  redirect: '/dashboard',
+  redirect: '/system',
   meta: {
     title: '首页'
   },
@@ -130,7 +132,7 @@ export const generator = (routerMap, parent) => {
       // 该路由对应页面的 组件 :方案1
       // component: constantRouterComponents[item.component || item.key],
       // 该路由对应页面的 组件 :方案2 (动态加载)
-      component: constantRouterComponents[item.component || item.key] || (() => import(`@/views/${item.component}`)),
+      component: constantRouterComponents[item.component || item.key] || (() => import(`@/views/${item.component}.vue`)),
 
       // meta: 页面标题, 菜单图标, 页面权限(供指令权限用，可去掉)
       meta: {
@@ -164,7 +166,9 @@ export const generator = (routerMap, parent) => {
     return currentRouter
   })
 }
-
+export const loadView = (view) => {
+  return (resolve) => require([`@/views/${view}.vue`], resolve)
+}
 /**
  * 数组转树形结构
  * @param list 源数组
