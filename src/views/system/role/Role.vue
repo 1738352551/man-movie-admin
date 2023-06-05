@@ -28,7 +28,7 @@
         </a-row>
       </a-form>
     </div>
-    <div class="table-operator" style='margin-top: 20px;'>
+    <div class="table-operator" style="margin-top: 20px;">
       <a-button type="primary">新增</a-button>
       <a-button type="warning">修改</a-button>
       <a-button type="danger">删除</a-button>

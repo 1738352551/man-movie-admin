@@ -10,7 +10,7 @@
           </a-col>
           <a-col :md="8" :sm="24">
             <a-form-item label="菜单状态">
-              <a-select placeholder='请选择菜单状态'>
+              <a-select placeholder="请选择菜单状态">
                 <a-select-option value="1">正常</a-select-option>
                 <a-select-option value="2">禁止</a-select-option>
               </a-select>
