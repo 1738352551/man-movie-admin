@@ -1,7 +1,9 @@
 // eslint-disable-next-line
 import * as loginService from '@/api/login'
+import { getCurrentUserNav } from '@/api/auth/user/user'
 // eslint-disable-next-line
 import { BasicLayout, BlankLayout, PageView, RouteView } from '@/layouts'
+import Analysis from '@/views/dashboard/Analysis'
 
 // 前端路由表 (基于动态)
 const constantRouterComponents = {
@@ -15,8 +17,7 @@ const constantRouterComponents = {
   '500': () => import(/* webpackChunkName: "error" */ '@/views/exception/500'),
 
   // 你需要动态引入的页面组件
-  Workplace: () => import('@/views/dashboard/Workplace'),
-  Analysis: () => import('@/views/dashboard/Analysis'),
+  Analysis: Analysis,
 
   // form
   BasicForm: () => import('@/views/form/basicForm'),
@@ -50,7 +51,9 @@ const constantRouterComponents = {
   SecuritySettings: () => import('@/views/account/settings/Security'),
   CustomSettings: () => import('@/views/account/settings/Custom'),
   BindingSettings: () => import('@/views/account/settings/Binding'),
-  NotificationSettings: () => import('@/views/account/settings/Notification')
+  NotificationSettings: () => import('@/views/account/settings/Notification'),
+
+  MovieInfo: () => import('@/views/movie/movieInfo/MovieInfo.vue')
 
   // 'TestWork': () => import(/* webpackChunkName: "TestWork" */ '@/views/dashboard/TestWork')
 }
@@ -86,21 +89,20 @@ const rootRouter = {
  */
 export const generatorDynamicRouter = token => {
   return new Promise((resolve, reject) => {
-    loginService
-      .getCurrentUserNav(token)
+    getCurrentUserNav(token)
       .then(res => {
         console.log('generatorDynamicRouter response:', res)
-        const { result } = res
+        const result = res.data
         const menuNav = []
         const childrenNav = []
         //      后端数据, 根级树数组,  根级 PID
+        console.log('result', result)
         listToTree(result, childrenNav, 0)
         rootRouter.children = childrenNav
         menuNav.push(rootRouter)
-        console.log('menuNav', menuNav)
         const routers = generator(menuNav)
         routers.push(notFoundRouter)
-        console.log('routers', routers)
+        console.log(routers)
         resolve(routers)
       })
       .catch(err => {
@@ -117,6 +119,7 @@ export const generatorDynamicRouter = token => {
  * @returns {*}
  */
 export const generator = (routerMap, parent) => {
+  // debugger
   return routerMap.map(item => {
     const { title, show, hideChildren, hiddenHeaderContent, target, icon } = item.meta || {}
     const currentRouter = {
@@ -138,6 +141,7 @@ export const generator = (routerMap, parent) => {
         permission: item.name
       }
     }
+    // console.log('component', currentRouter.component)
     // 是否设置了隐藏菜单
     if (show === false) {
       currentRouter.hidden = true

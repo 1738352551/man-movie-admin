@@ -1,8 +1,11 @@
 import storage from 'store'
 import expirePlugin from 'store/plugins/expire'
-import { login, getInfo, logout } from '@/api/login'
+
+import { login, getUserInfo, logout } from '@/api/auth/user/user'
 import { ACCESS_TOKEN } from '@/store/mutation-types'
 import { welcome } from '@/utils/util'
+// import { welcome } from '@/utils/util'
+// import get from 'lodash.get'
 
 storage.addPlugin(expirePlugin)
 const user = {
@@ -39,7 +42,7 @@ const user = {
     Login ({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
         login(userInfo).then(response => {
-          const result = response.result
+          const result = response.data
           storage.set(ACCESS_TOKEN, result.token, new Date().getTime() + 7 * 24 * 60 * 60 * 1000)
           commit('SET_TOKEN', result.token)
           resolve()
@@ -53,9 +56,11 @@ const user = {
     GetInfo ({ commit }) {
       return new Promise((resolve, reject) => {
         // 请求后端获取用户信息 /api/user/info
-        getInfo().then(response => {
-          const { result } = response
+        getUserInfo().then(response => {
+          const result = response.data
+          console.log(result)
           if (result.role && result.role.permissions.length > 0) {
+            // 对象结构赋值给role
             const role = { ...result.role }
             role.permissions = result.role.permissions.map(permission => {
               const per = {
@@ -64,10 +69,10 @@ const user = {
                }
               return per
             })
+            console.log(role)
             role.permissionList = role.permissions.map(permission => { return permission.permissionId })
             // 覆盖响应体的 role, 供下游使用
             result.role = role
-
             commit('SET_ROLES', role)
             commit('SET_INFO', result)
             commit('SET_NAME', { name: result.name, welcome: welcome() })

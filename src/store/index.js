@@ -6,7 +6,7 @@ import user from './modules/user'
 
 // default router permission control
 // 默认路由模式为静态路由 (router.config.js)
-import permission from './modules/static-router'
+import permission from './modules/async-router'
 
 // dynamic router permission control (Experimental)
 // 动态路由模式（api请求后端生成）
