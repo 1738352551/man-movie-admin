@@ -36,3 +36,45 @@ export function getCurrentUserNav () {
     }
   )
 }
+
+// 分页查询
+export function listPage (data) {
+  return axios({
+    url: '/user/list/page',
+    method: 'post',
+    data
+  })
+}
+
+export function addUser (data) {
+  return axios({
+    url: '/user/add',
+    method: 'post',
+    data
+  })
+}
+
+export function updateUser (data) {
+  return axios({
+    url: '/user/update',
+    method: 'post',
+    data
+  })
+}
+
+// 根据用户id获取用户
+export function getUserById (id) {
+  return axios({
+    url: '/user/' + id,
+    method: 'get'
+  })
+}
+
+// 删除用户
+export function deleteUser (ids) {
+  return axios({
+    url: '/user/delete',
+    method: 'post',
+    data: ids
+  })
+}
