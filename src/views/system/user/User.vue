@@ -182,7 +182,7 @@
   </div>
 </template>
 <script>
-import { addUser, updateUser, listPage, getUserById, deleteUser } from '@/api/auth/user/user'
+import { addUser, updateUser, listPage, getUserById, deleteUser, getUserAsRole } from '@/api/auth/user/user'
 import { getRoleList } from '@/api/auth/role/role'
 
 export default {
@@ -335,13 +335,6 @@ export default {
           }
         })
     },
-    getRoleAllList () {
-      getRoleList().then(
-        res => {
-          this.allRoleListData = res.data
-        }
-      )
-    },
     handleSearch (e) {
       e.preventDefault()
       this.getData()
@@ -388,7 +381,6 @@ export default {
           console.log(this.userData)
         }
       )
-      this.getRoleAllList()
     },
     onSelectChange (selectedRowKeys) {
       this.selectedRowKeys = selectedRowKeys
@@ -443,6 +435,16 @@ export default {
           this.form.status = res.data.status
           this.form.email = res.data.email
           this.form.roles = res.data.roles
+          getRoleList().then(
+            res => {
+              this.allRoleListData = res.data
+              getUserAsRole(this.form.id).then(
+                res => {
+                  this.form.roles = res.data
+                }
+              )
+            }
+          )
           this.modalTitle = '修改用户'
           this.modalVisible = true
         }

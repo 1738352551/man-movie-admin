@@ -30,8 +30,8 @@
     </div>
     <div class="table-operator" style="margin-top: 20px;">
       <a-button type="primary" @click="handleAdd">新增</a-button>
-      <a-button type="warning" :disabled="selectedEdit">修改</a-button>
-      <a-button type="danger" :disabled="selectedRemove">删除</a-button>
+      <a-button type="warning" :disabled="selectedEdit" @click="handleUpdate">修改</a-button>
+      <a-button type="danger" :disabled="selectedRemove" @click="removeRole">删除</a-button>
     </div>
     <div class="ant-table-body" style="margin-top: 20px">
       <a-table
@@ -42,7 +42,7 @@
       >
         <span style="display: flex;flex-flow: row;gap: 5px;" slot="action" slot-scope="text, record">
           <a-button type="primary" @click="handleUpdate(record)">编辑</a-button>
-          <a-button type="danger" @click="removeUser(record)">删除</a-button>
+          <a-button type="danger" @click="removeRole(record)">删除</a-button>
         </span>
       </a-table>
     </div>
@@ -50,24 +50,25 @@
     <a-modal
       :title="modalTitle"
       :visible="modalVisible"
-      @on-ok="handleOk"
-      @on-cancel="handleCancel"
+      @ok="handleOk"
+      @cancel="handleCancel"
+      :rules="rules"
     >
       <a-form-model
         :model="form"
         ref="form"
       >
         <a-form-model-item label="角色名称" prop="name">
-          <a-input placeholder="请输入角色名称" v-model="queryForm.name"/>
+          <a-input placeholder="请输入角色名称" v-model="form.name"/>
         </a-form-model-item>
         <a-form-model-item label="权限标识" prop="roleKey">
-          <a-input placeholder="请输入权限标识" v-model="queryForm.name"/>
+          <a-input placeholder="请输入权限标识" v-model="form.roleKey"/>
         </a-form-model-item>
         <a-form-model-item label="角色顺序" pro="orderBy">
-          <a-input-number v-model="queryForm.orderBy" />
+          <a-input-number v-model="form.orderBy" />
         </a-form-model-item>
         <a-form-model-item label="角色状态" prop="status">
-          <a-select placeholder="请选择角色状态" v-model="queryForm.status">
+          <a-select placeholder="请选择角色状态" v-model="form.status">
             <a-select-option value="1">正常</a-select-option>
             <a-select-option value="2">禁止</a-select-option>
           </a-select>
@@ -85,7 +86,7 @@
   </div>
 </template>
 <script>
-import { getRole, rolePage } from '@/api/auth/role/role'
+import { addRole, deleteRole, getRole, getRoleActionableMenus, rolePage, updateRole } from '@/api/auth/role/role'
 import { getTreeList } from '@/api/auth/menu/menu'
 
 export default {
@@ -97,6 +98,10 @@ export default {
       selectedRowKeys: [],
       modalTitle: '',
       modalVisible: false,
+      rules: {
+        name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
+        roleKey: [{ required: true, message: '请输入权限标识', trigger: 'blur' }]
+      },
       columns: [
         {
           title: '角色编号',
@@ -151,6 +156,7 @@ export default {
   watch: {
     selectedRowKeys (newVal) {
       this.ids = [...newVal]
+      console.log(this.ids)
       this.selectedEdit = newVal.length !== 1
       this.selectedRemove = !(newVal.length > 0)
     }
@@ -194,8 +200,18 @@ export default {
             status: res.data.status,
             orderBy: res.data.orderBy
           }
-          this.modalTitle = '修改角色'
-          this.modalVisible = true
+          getTreeList().then(res => {
+            if (res.code === 200) {
+              this.treeData = res.data
+              getRoleActionableMenus(this.form.id).then(res => {
+                if (res.code === 200) {
+                  this.form.menus = res.data
+                  this.modalTitle = '修改角色'
+                  this.modalVisible = true
+                }
+              })
+            }
+          })
         }
       })
     },
@@ -210,15 +226,38 @@ export default {
       })
     },
     handleOk () {
-      if (this.form.id !== undefined) {
-        // TODO: 修改角色信息
-      } else {
-        // TODO: 添加角色
-      }
+      this.$refs.form.validate(valid => {
+        if (valid) {
+          if (this.form.id !== undefined) {
+            updateRole(this.form).then(res => {
+              if (res.code === 200) {
+                this.$message.success('修改角色完成!')
+                this.getData()
+              }
+            })
+          } else {
+            addRole(this.form).then(res => {
+              if (res.code === 200) {
+                this.$message.success('添加角色完成!')
+                this.getData()
+              }
+            })
+          }
+        }
+      })
     },
     handleCancel () {
+      this.reset()
+      this.modalVisible = false
     },
-    removeUser (record) {
+    removeRole (record) {
+      const ids = record.id || this.ids
+      deleteRole(ids).then(res => {
+        if (res.code === 200) {
+          this.$message.success('删除角色成功!')
+          this.getData()
+        }
+      })
     },
     onSelectChange (selectedRowKeys) {
       this.selectedRowKeys = selectedRowKeys

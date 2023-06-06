@@ -78,3 +78,10 @@ export function deleteUser (ids) {
     data: ids
   })
 }
+
+export function getUserAsRole (id) {
+  return axios({
+    url: '/user/role/' + id,
+    method: 'get'
+  })
+}
