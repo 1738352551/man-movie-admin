@@ -9,3 +9,22 @@ export function getRoleList () {
     }
   )
 }
+
+export function rolePage (query) {
+  return axios(
+    {
+      url: '/role/list/page',
+      method: 'post',
+      data: query
+    }
+  )
+}
+
+export function getRole (id) {
+  return axios(
+    {
+      url: '/role/' + id,
+      method: 'get'
+    }
+  )
+}
