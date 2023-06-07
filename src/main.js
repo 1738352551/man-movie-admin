@@ -20,7 +20,7 @@ import './core/lazy_use' // use lazy load components
 import './permission' // permission control
 import './utils/filter' // global filter
 import './global.less' // global style
-import { FormModel, Tree } from 'ant-design-vue'
+import { FormModel, Tree, TreeSelect } from 'ant-design-vue'
 
 Vue.config.productionTip = false
 
@@ -28,6 +28,7 @@ Vue.config.productionTip = false
 Vue.use(VueAxios)
 Vue.use(FormModel)
 Vue.use(Tree)
+Vue.use(TreeSelect)
 // use pro-layout components
 Vue.component('pro-layout', ProLayout)
 Vue.component('page-container', PageHeaderWrapper)

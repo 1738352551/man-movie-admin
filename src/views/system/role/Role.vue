@@ -52,11 +52,11 @@
       :visible="modalVisible"
       @ok="handleOk"
       @cancel="handleCancel"
-      :rules="rules"
     >
       <a-form-model
         :model="form"
         ref="form"
+        :rules="rules"
       >
         <a-form-model-item label="角色名称" prop="name">
           <a-input placeholder="请输入角色名称" v-model="form.name"/>
@@ -65,7 +65,7 @@
           <a-input placeholder="请输入权限标识" v-model="form.roleKey"/>
         </a-form-model-item>
         <a-form-model-item label="角色顺序" pro="orderBy">
-          <a-input-number v-model="form.orderBy" />
+          <a-input-number v-model="form.orderBy" defaultValue="0"/>
         </a-form-model-item>
         <a-form-model-item label="角色状态" prop="status">
           <a-select placeholder="请选择角色状态" v-model="form.status">
