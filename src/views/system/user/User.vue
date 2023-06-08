@@ -350,7 +350,7 @@ export default {
         nickname: '',
         gender: null,
         loginStatus: null,
-        status: null,
+        status: null
       }
       this.getData()
     },
