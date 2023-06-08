@@ -25,13 +25,13 @@
     </div>
     <div class="table-operator" style="margin-top: 20px;">
       <a-button type="primary" @click="handleAdd">新增</a-button>
-      <a-button type="primary" @click="handleUnfold">全部展开/收起</a-button>
     </div>
     <div class="ant-table-body" style="margin-top: 20px">
       <a-table
         :columns="columns"
         rowKey="id"
         :data-source="menuData"
+        :pagination="false"
       >
         <span style="display: flex;flex-flow: row;gap: 5px;justify-content: center;" slot="action" slot-scope="text, record">
           <a-button type="primary" @click="handleUpdate(record)">编辑</a-button>
@@ -288,9 +288,6 @@ export default {
           }
         }
       )
-    },
-    handleUnfold () {
-
     }
   }
 }

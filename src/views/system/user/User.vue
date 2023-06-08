@@ -69,6 +69,7 @@
         rowKey="id"
         :row-selection="{ selectedRowKeys: selectedRowKeys, onChange: onSelectChange }"
         :columns="columns"
+        :pagination="false"
         :data-source="userData">
         <a slot="username" slot-scope="text">{{ text }}</a>
         <span slot="avatar" slot-scope="avatar">
@@ -88,6 +89,7 @@
           <a-button type="danger" @click="removeUser(record)">删除</a-button>
         </span>
       </a-table>
+      <a-pagination style="margin-top: 10px" v-model="queryForm.current" :size="queryForm.pageSize.toString()" @change="getData" :total="total" />
     </div>
     <a-modal
       :title="modalTitle"
@@ -201,6 +203,7 @@ export default {
       userData: [],
       allRoleListData: [],
       ids: [],
+      total: 0,
       columns: [
         {
           title: '用户名',
@@ -272,7 +275,9 @@ export default {
         nickname: '',
         gender: null,
         loginStatus: null,
-        status: null
+        status: null,
+        current: 1,
+        pageSize: 10
       },
       // 添加/修改的form表单
       form: {
@@ -345,7 +350,7 @@ export default {
         nickname: '',
         gender: null,
         loginStatus: null,
-        status: null
+        status: null,
       }
       this.getData()
     },
@@ -374,11 +379,11 @@ export default {
     getData () {
       listPage(this.queryForm).then(
         res => {
-          this.userData = res.data.map(r => {
+          this.userData = res.data.list.map(r => {
             r.key = r.id
             return r
           })
-          console.log(this.userData)
+          this.total = res.data.total
         }
       )
     },

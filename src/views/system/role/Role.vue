@@ -39,12 +39,14 @@
         :columns="columns"
         :data-source="roleData"
         rowKey="id"
+        :pagination="false"
       >
         <span style="display: flex;flex-flow: row;gap: 5px;" slot="action" slot-scope="text, record">
           <a-button type="primary" @click="handleUpdate(record)">编辑</a-button>
           <a-button type="danger" @click="removeRole(record)">删除</a-button>
         </span>
       </a-table>
+      <a-pagination style="margin-top: 10px" v-model="queryForm.current" :size="queryForm.pageSize.toString()" @change="getData" :total="total" />
     </div>
 
     <a-modal
@@ -97,6 +99,7 @@ export default {
       selectedRemove: true,
       selectedRowKeys: [],
       modalTitle: '',
+      total: 0,
       modalVisible: false,
       rules: {
         name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
@@ -134,7 +137,9 @@ export default {
       queryForm: {
         name: undefined,
         roleKey: undefined,
-        status: undefined
+        status: undefined,
+        current: 1,
+        pageSize: 10
       },
       form: {
         id: undefined,
@@ -165,7 +170,8 @@ export default {
     getData () {
       rolePage(this.queryForm).then(res => {
         if (res.code === 200) {
-          this.roleData = res.data
+          this.total = res.data.total
+          this.roleData = res.data.list
         }
       })
     },
