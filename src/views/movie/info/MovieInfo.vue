@@ -27,13 +27,13 @@
 
     <div class="table-operator" style="margin-top: 20px;">
       <a-button type="primary" @click="handleAdd">新增</a-button>
-      <a-button type="primary" @click="handleEdit">编辑</a-button>
-      <a-button type="primary" @click="handleDelete">删除</a-button>
+      <a-button type="primary" @click="handleEdit" :disabled="selectedMovieInfoEdit">编辑</a-button>
+      <a-button type="primary" @click="handleDelete" :disabled="selectedMovieInfoDelete">删除</a-button>
     </div>
 
     <div class="ant-table-body" style="margin-top: 20px">
       <a-table
-        :row-selection="{ selectedRowKeys: selectedRowKeys, onChange: onSelectChange }"
+        :row-selection="{ selectedRowKeys: selectedMovieRowKeys, onChange: onSelectChange }"
         :columns="columns"
         rowKey="id"
         :pagination="false"
@@ -64,13 +64,15 @@
     <a-modal
       :title="modalTitle"
       :visible="modalVisible"
-      @ok="handleSubmit"
-      @cancel="handleCancel"
+      @ok="handleSubmitMovieInfo"
+      @cancel="handleCancelMovieInfo"
+      width="600px"
     >
       <a-form-model
         v-if="actionType === 'info'"
         :model="movieInfoForm"
         ref="movieInfoRef"
+        :rules="movieInfoFormRules"
       >
         <a-row :gutter="48">
           <a-col :md="12" :sm="24">
@@ -89,6 +91,21 @@
           </a-col>
         </a-row>
         <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <a-form-model-item label="影视标签" prop="tagId">
+              <a-select @change="tagChanged" mode="tags" style="width: 100%" placeholder="请选择影视相关标签" v-model="movieInfoForm.tagId">
+                <a-select-option
+                  v-for="tag in tagList"
+                  :key="tag.id.toString()"
+                  :value="tag.id.toString()"
+                >
+                  {{ tag.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="48">
           <a-col :md="12" :sm="24">
             <a-form-model-item label="影视封面" prop="bannerUrl">
               <a-upload
@@ -99,7 +116,7 @@
                 :show-upload-list="false"
                 action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
               >
-                <img v-if="imageUrl" :src="imageUrl" alt="avatar" />
+                <img v-if="movieInfoForm.bannerUrl" width="200" height="200" :src="movieInfoForm.bannerUrl" alt="bannerImg" />
                 <div v-else>
                   <a-icon :type="loading ? 'loading' : 'plus'" />
                   <div class="ant-upload-text">
@@ -120,9 +137,9 @@
         <a-row :gutter="48" v-if="movieInfoForm.type!=='2'">
           <a-col :md="24" :sm="24">
             <div class="table-operator">
-              <a-button type="primary">新增</a-button>
-              <a-button type="primary">编辑</a-button>
-              <a-button type="primary">删除</a-button>
+              <a-button type="primary" @click="handleEpisodesAdd">新增</a-button>
+              <a-button type="primary" :disabled="selectedEpisodesEdit" @click="handleEpisodesEdit">编辑</a-button>
+              <a-button type="primary" :disabled="selectedEpisodesDelete" @click="handleEpisodesDelete">删除</a-button>
             </div>
           </a-col>
         </a-row>
@@ -130,20 +147,56 @@
           <a-col :md="24" :sm="24">
             <a-table
               :columns="episodesColumns"
-              :data-source.sync="movieInfoForm.episodesList"
+              :data-source.sync="this.episodesData"
               rowKey="id"
+              size="small"
+              :pagination="{
+                pageSize: 3
+              }"
+              :row-selection="{ selectedRowKeys: selectedEpisodesRowKeys, onChange: onSelectEpisodesChange }"
             >
             </a-table>
           </a-col>
         </a-row>
       </a-form-model>
+    </a-modal>
 
+    <a-modal
+      :title="episodesModalTitle"
+      :visible="episodesModalVisible"
+      @ok="handleSubmitEpisodes"
+      @cancel="handleCancelEpisodes"
+    >
       <a-form-model
-        v-if="actionType === 'episodes'"
-        :model="movieInfoForm"
-        ref="movieInfoRef"
+        :model="movieEpisodesForm"
+        ref="movieEpisodesRef"
+        :rules="episodesRules"
       >
-
+        <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <a-form-model-item label="剧集名" prop="title">
+              <a-input v-model="movieEpisodesForm.title" placeholder="请输入剧集名"></a-input>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <a-form-model-item label="剧集对应视频" prop="movieUrl">
+              <a-upload v-model="movieEpisodesForm.movieUrl" :file-list="movieFileList" :remove="handleMovieFileRemove" :before-upload="beforeMovieFileUpload">
+                <a-button> <a-icon type="upload" /> 请选择视频文件 </a-button>
+              </a-upload>
+              <a-button
+                type="primary"
+                :disabled="movieFileList.length === 0"
+                :loading="uploading"
+                style="margin-top: 16px"
+                @click="handleMovieFileUpload"
+              >
+                {{ uploading ? '上传中...' : '开始上传' }}
+              </a-button>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
       </a-form-model>
     </a-modal>
   </div>
@@ -151,14 +204,33 @@
 
 <script>
 import TagSelectOption from '@/components/TagSelect/TagSelectOption'
-import { movieInfoListPage } from '@/api/movie/movieinfo'
-import { episodesListForMovie } from '@/api/movie/episodes'
+import { addMovieInfo, deleteMovieInfo, getMovieInfo, movieInfoListPage, updateMovieInfo } from '@/api/movie/movieinfo'
+import {
+  addEpisodes,
+  deleteEpisodes,
+  episodesListForMovie,
+  getMovieEpisodes,
+  updateEpisodes
+} from '@/api/movie/episodes'
+import { getTags } from '@/api/movie/movietag'
 
 export default {
   name: 'Index',
   components: { TagSelectOption },
   data () {
     return {
+      episodesModalTitle: '',
+      episodesModalVisible: false,
+      uploading: false,
+      movieFileList: [],
+      movieEpisodesForm: {
+        title: '',
+        movieUrl: '',
+        id: null,
+        movieId: null
+      },
+      selectedEpisodesRowKeys: [],
+      episodeIds: [],
       imageUrl: '',
       loading: false,
       actionType: 'info',
@@ -251,23 +323,65 @@ export default {
       modalTitle: '',
       modalVisible: false,
       expandedRowKeys: [],
+      movieInfoIds: [],
+      selectedMovieRowKeys: [],
+      selectedMovieInfoEdit: true,
+      selectedMovieInfoDelete: true,
+      selectedEpisodesEdit: true,
+      selectedEpisodesDelete: true,
       movieInfoForm: {
-        name: undefined,
+        id: null,
+        name: null,
         type: 1,
-        introduction: undefined,
-        bannerUrl: undefined,
-        episodesList: []
-      }
+        introduction: null,
+        bannerUrl: null,
+        episodesList: [],
+        movieActor: [],
+        tagId: []
+      },
+      movieInfoFormRules: {
+        name: [
+          { required: true, message: '请输入影视名', trigger: 'blur' }
+        ],
+        type: [
+          { required: true, message: '请选择影视类型', trigger: 'change' }
+        ],
+        tagId: [
+          { required: true, message: '请选择影视相关标签', trigger: 'change' }
+        ]
+      },
+      episodesRules: {
+        title: [
+          { required: true, message: '请输入剧集标题', trigger: 'blur' }
+        ]
+      },
+      tagList: []
     }
   },
   beforeCreate () {
     this.queryForm = this.$form.createForm(this, { name: 'queryForm' })
-    // this.queryForm = this.$form.createForm(this, { name: 'queryForm' })
+    this.movieInfoForm = this.$form.createForm(this, { name: 'movieInfoForm' })
+    this.movieEpisodesForm = this.$form.createForm(this, { name: 'movieEpisodesForm' })
   },
   created () {
     this.getList()
   },
+  watch: {
+    selectedMovieRowKeys (newVal) {
+      this.movieInfoIds = [...newVal]
+      this.selectedMovieInfoEdit = newVal.length !== 1
+      this.selectedMovieInfoDelete = !(newVal.length > 0)
+    },
+    selectedEpisodesRowKeys (newVal) {
+      this.episodeIds = [...newVal]
+      this.selectedEpisodesEdit = newVal.length !== 1
+      this.selectedEpisodesDelete = !(newVal.length > 0)
+    }
+  },
   methods: {
+    tagChanged () {
+      console.log(this.movieInfoForm.tagId)
+    },
     typeChange (newVal) {
       console.log(this.movieInfoForm)
     },
@@ -290,7 +404,6 @@ export default {
         res => {
           if (res.code === 200) {
             this.episodesData = res.data
-            console.log(record)
           }
         }
       )
@@ -301,41 +414,213 @@ export default {
           if (res.code === 200) {
             this.total = res.data.total
             this.movieInfoData = res.data.list
-            console.log(this.movieInfoData)
+            getTags().then(res => {
+              if (res.code === 200) {
+                this.tagList = res.data
+              }
+            })
           }
         }
       )
     },
+    resetForm () {
+      this.movieInfoForm = {
+        id: null,
+        name: null,
+        type: 1,
+        introduction: null,
+        bannerUrl: null,
+        episodesList: [],
+        movieActor: [],
+        tagId: []
+      }
+    },
     handleAdd () {
+      this.resetForm()
       this.modalTitle = '添加影视'
       this.modalVisible = true
     },
     handleEdit (record) {
-
+      this.resetForm()
+      this.movieInfoForm.id = record.id || this.movieInfoIds
+      console.log(this.movieInfoForm.id, record.id, this.movieInfoIds)
+      getMovieInfo(this.movieInfoForm.id).then(
+        res => {
+          const result = res.data
+          this.movieInfoForm = {
+            id: this.movieInfoForm.id,
+            name: result.movieName,
+            type: result.movieType,
+            introduction: result.introduction,
+            bannerUrl: result.bannerUrl,
+            movieActor: result.movieActor,
+            tagId: result.tagList.map(value => value.id.toString())
+          }
+          episodesListForMovie(record.id).then(
+            res => {
+              if (res.code === 200) {
+                this.episodesData = res.data
+              }
+            }
+          )
+          this.modalTitle = '修改影视信息'
+          this.modalVisible = true
+        }
+      )
     },
     handleDelete (record) {
-
+      this.movieInfoForm.id = record.id || this.movieInfoIds
+      deleteMovieInfo(this.movieInfoForm.id).then(
+        res => {
+          if (res.code === 200) {
+            this.$message.success('删除成功')
+            this.getList()
+          }
+        }
+      )
     },
     handleQuery () {
-
+      this.getList()
     },
     handleReset () {
-      // this.queryForm = {
-      //   name
-      // }
       this.$refs.queryForm.resetFields()
     },
-    handleSubmit () {
-
+    handleSubmitMovieInfo () {
+      this.$refs.movieInfoRef.validate(
+        valid => {
+          if (valid) {
+            console.log(this.movieInfoForm.id)
+            if (this.movieInfoForm.id === null) {
+              addMovieInfo(this.movieInfoForm).then(res => {
+                if (res.code === 200) {
+                  this.$message.success('添加影视成功!')
+                  this.modalVisible = false
+                  this.getList()
+                }
+              })
+            } else {
+              updateMovieInfo(this.movieInfoForm).then(res => {
+                if (res.code === 200) {
+                  this.$message.success('修改影视成功!')
+                  this.modalVisible = false
+                  this.getList()
+                }
+              })
+            }
+          }
+        }
+      )
     },
-    handleCancel () {
-
+    handleCancelMovieInfo () {
+      this.resetForm()
+      this.modalVisible = false
     },
-    onSelectChange () {
-
+    onSelectChange (selectedRowKeys) {
+      this.selectedMovieRowKeys = selectedRowKeys
     },
     innerExpandedRowsChange (expandedRows) {
 
+    },
+    onSelectEpisodesChange (selectedRowKeys) {
+      this.selectedEpisodesRowKeys = selectedRowKeys
+    },
+    handleMovieFileRemove (file) {
+      const index = this.movieFileList.indexOf(file)
+      const newFileList = this.movieFileList.slice()
+      newFileList.splice(index, 1)
+      this.movieFileList = newFileList
+    },
+    beforeMovieFileUpload (file) {
+      this.movieFileList = [...this.movieFileList, file]
+      return false
+    },
+    handleMovieFileUpload () {
+
+    },
+    handleSubmitEpisodes () {
+      this.$refs.movieEpisodesRef.validate(
+        valid => {
+          if (valid) {
+            if (this.movieEpisodesForm.id === null) {
+              this.movieEpisodesForm.movieId = this.movieInfoForm.id
+              console.log(this.movieEpisodesForm.movieId, this.movieInfoForm.id)
+              addEpisodes(this.movieEpisodesForm).then(res => {
+                if (res.code === 200) {
+                  this.$message.success('添加影视成功!')
+                  this.episodesModalVisible = false
+                  episodesListForMovie(this.movieInfoForm.id).then(
+                    res => {
+                      if (res.code === 200) {
+                        this.episodesData = res.data
+                      }
+                    }
+                  )
+                }
+              })
+            } else {
+              updateEpisodes(this.movieEpisodesForm).then(res => {
+                if (res.code === 200) {
+                  this.$message.success('修改影视成功!')
+                  this.episodesModalVisible = false
+                  episodesListForMovie(this.movieInfoForm.id).then(
+                    res => {
+                      if (res.code === 200) {
+                        this.episodesData = res.data
+                      }
+                    }
+                  )
+                }
+              })
+            }
+          }
+        }
+      )
+    },
+    handleCancelEpisodes () {
+      this.resetEpisodesForm()
+      this.episodesModalVisible = false
+    },
+    handleEpisodesAdd () {
+      this.resetEpisodesForm()
+      this.episodesModalTitle = '添加剧集'
+      this.episodesModalVisible = true
+    },
+    resetEpisodesForm () {
+      this.movieEpisodesForm = {
+        title: '',
+        movieUrl: '',
+        id: null,
+        movieId: null
+      }
+    },
+    handleEpisodesEdit () {
+      this.resetEpisodesForm()
+      this.movieEpisodesForm.id = this.episodeIds
+      getMovieEpisodes(this.movieEpisodesForm.id).then(
+        res => {
+          if (res.code === 200) {
+            this.movieEpisodesForm = res.data
+            this.episodesModalTitle = '修改剧集信息'
+            this.episodesModalVisible = true
+          }
+        }
+      )
+    },
+    handleEpisodesDelete () {
+      deleteEpisodes(this.episodeIds).then(
+        res => {
+          if (res.code === 200) {
+            this.$message.success('删除成功')
+            episodesListForMovie(this.movieInfoForm.id).then(
+              res => {
+                if (res.code === 200) {
+                  this.episodesData = res.data
+                }
+              }
+            )
+          }
+        }
+      )
     }
   }
 }
