@@ -20,8 +20,8 @@ export function getMovieEpisodes (id) {
 export function deleteEpisodes (ids) {
   return axios({
     url: `/movie/episodes/delete`,
-    method: 'post',
-    data: { ids }
+    method: 'delete',
+    data: ids
   })
 }
 

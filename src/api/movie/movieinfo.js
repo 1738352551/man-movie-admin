@@ -54,3 +54,12 @@ export function deleteMovieInfo (ids) {
     }
   )
 }
+
+export function getMovieActor () {
+  return axios(
+    {
+      url: '/movie_info/getMovieInfoActorByMovieId',
+      method: 'GET'
+    }
+  )
+}

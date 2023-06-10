@@ -150,11 +150,36 @@
               :data-source.sync="this.episodesData"
               rowKey="id"
               size="small"
+              :row-selection="{ selectedRowKeys: selectedEpisodesRowKeys, onChange: onSelectEpisodesChange }"
               :pagination="{
                 pageSize: 3
               }"
-              :row-selection="{ selectedRowKeys: selectedEpisodesRowKeys, onChange: onSelectEpisodesChange }"
             >
+            </a-table>
+          </a-col>
+        </a-row>
+        <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <div class="table-operator">
+              <a-button type="primary" @click="handleActorAdd">新增</a-button>
+              <a-button type="primary" v-if="false" :disabled="selectedActorEdit" @click="handleActorEdit">编辑</a-button>
+              <a-button type="primary" v-if="false" :disabled="selectedActorDelete" @click="handleActorDelete">删除</a-button>
+            </div>
+          </a-col>
+        </a-row>
+        <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <a-table
+              :columns="actorColumns"
+              :data-source.sync="this.actorData"
+              rowKey="actorId"
+              size="small"
+              :row-selection="{ selectedRowKeys: selectedActorRowKeys, onChange: onSelectActorChange }"
+              :pagination="{
+                pageSize: 3
+              }"
+            >
+
             </a-table>
           </a-col>
         </a-row>
@@ -199,12 +224,79 @@
         </a-row>
       </a-form-model>
     </a-modal>
+
+    <a-modal
+      :title="actorModalTitle"
+      :visible="actorModalVisible"
+      @ok="handleSubmitActor"
+      @cancel="handleCancelActor"
+    >
+      <a-form-model
+        :model="movieActorForm"
+        ref="movieActorRef"
+        :rules="actorRules"
+      >
+        <a-row :gutter="48">
+          <a-col :md="24" :sm="24">
+            <a-form-model-item>
+              <a-select placeholder="请选择演员" v-model="movieActorForm.actorId">
+                <a-select-option v-for="actor in allActor" :value="actor.id" :key="actor.id">
+                  {{ actor.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="48">
+          <a-col :md="12" :sm="24">
+            <a-form-model-item label="职位" prop="posts">
+              <a-input v-model="movieActorForm.posts" placeholder="请输入演员职位"></a-input>
+            </a-form-model-item>
+          </a-col>
+          <a-col :md="12" :sm="24">
+            <a-form-model-item label="剧中人物" prop="posts">
+              <a-input v-model="movieActorForm.cosplayName" placeholder="请输入扮演人物"></a-input>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="48">
+          <a-col :md="12" :sm="24">
+            <a-form-model-item label="剧中照片" prop="cosplayPhoto">
+              <a-upload
+                name="avatar"
+                list-type="picture-card"
+                class="avatar-uploader"
+                v-model="movieActorForm.cosplayPhoto"
+                :show-upload-list="false"
+                action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+              >
+                <img v-if="movieActorForm.cosplayPhoto" width="200" height="200" :src="movieActorForm.cosplayPhoto" alt="bannerImg" />
+                <div v-else>
+                  <a-icon :type="actorLoading ? 'loading' : '添加'" />
+                  <div class="ant-upload-text">
+                    Upload
+                  </div>
+                </div>
+              </a-upload>
+            </a-form-model-item>
+          </a-col>
+        </a-row>
+      </a-form-model>
+    </a-modal>
   </div>
 </template>
 
 <script>
 import TagSelectOption from '@/components/TagSelect/TagSelectOption'
-import { addMovieInfo, deleteMovieInfo, getMovieInfo, movieInfoListPage, updateMovieInfo } from '@/api/movie/movieinfo'
+import {
+  addMovieInfo,
+  deleteMovieInfo,
+  getMovieActor,
+  getMovieInfo,
+  movieInfoListPage,
+  updateMovieInfo
+} from '@/api/movie/movieinfo'
 import {
   addEpisodes,
   deleteEpisodes,
@@ -213,12 +305,49 @@ import {
   updateEpisodes
 } from '@/api/movie/episodes'
 import { getTags } from '@/api/movie/movietag'
+import { allActor } from '@/api/movie/movieactor'
 
 export default {
   name: 'Index',
   components: { TagSelectOption },
   data () {
     return {
+      actorLoading: false,
+      actorModalTitle: '',
+      actorModalVisible: false,
+      allActor: [],
+      selectedActorRowKeys: [],
+      actorColumns: [
+        {
+          title: '演员名字',
+          dataIndex: 'name',
+          key: 'name'
+        },
+        {
+          title: '照片',
+          dataIndex: 'photoUrl',
+          key: 'photoUrl'
+        },
+        {
+          title: '职位',
+          dataIndex: 'posts',
+          key: 'posts'
+        },
+        {
+          title: '扮演角色',
+          dataIndex: 'cosplayName',
+          key: 'cosplayName'
+        },
+        {
+          title: '剧中照片',
+          dataIndex: 'cosplayPhoto',
+          key: 'cosplayPhoto'
+        }
+      ],
+      actorData: [],
+      selectedActorEdit: false,
+      selectedActorDelete: false,
+      selectedActorIds: [],
       episodesModalTitle: '',
       episodesModalVisible: false,
       uploading: false,
@@ -355,7 +484,22 @@ export default {
           { required: true, message: '请输入剧集标题', trigger: 'blur' }
         ]
       },
-      tagList: []
+      tagList: [],
+      movieActorForm: {
+        actorId: null,
+        movieId: null,
+        posts: null,
+        cosplayName: null,
+        cosplayPhoto: null
+      },
+      actorRules: {
+        actorId: [
+          { required: true, message: '请选择演员!', trigger: 'change' }
+        ],
+        cosplayName: [
+          { required: true, message: '请输入扮演任务', trigger: 'blur' }
+        ]
+      }
     }
   },
   beforeCreate () {
@@ -368,12 +512,14 @@ export default {
   },
   watch: {
     selectedMovieRowKeys (newVal) {
-      this.movieInfoIds = [...newVal]
       this.selectedMovieInfoEdit = newVal.length !== 1
       this.selectedMovieInfoDelete = !(newVal.length > 0)
     },
+    selectedActorRowKeys (newVal) {
+      this.selectedActorEdit = newVal.length !== 1
+      this.selectedActorDelete = !(newVal.length > 0)
+    },
     selectedEpisodesRowKeys (newVal) {
-      this.episodeIds = [...newVal]
       this.selectedEpisodesEdit = newVal.length !== 1
       this.selectedEpisodesDelete = !(newVal.length > 0)
     }
@@ -417,6 +563,11 @@ export default {
             getTags().then(res => {
               if (res.code === 200) {
                 this.tagList = res.data
+              }
+            })
+            allActor().then(res => {
+              if (res.code === 200) {
+                this.allActor = res.data
               }
             })
           }
@@ -463,17 +614,26 @@ export default {
               }
             }
           )
+          getMovieActor(this.movieActorForm.movieId).then(
+            res => {
+              if (res.code === 200) {
+                this.actorData = res.data
+              }
+            }
+          )
           this.modalTitle = '修改影视信息'
           this.modalVisible = true
         }
       )
     },
     handleDelete (record) {
+      const that = this
       this.movieInfoForm.id = record.id || this.movieInfoIds
       deleteMovieInfo(this.movieInfoForm.id).then(
         res => {
           if (res.code === 200) {
             this.$message.success('删除成功')
+            that.onSelectChange([])
             this.getList()
           }
         }
@@ -493,6 +653,7 @@ export default {
             if (this.movieInfoForm.id === null) {
               addMovieInfo(this.movieInfoForm).then(res => {
                 if (res.code === 200) {
+                  this.movieInfoForm.movieActor = this.actorData
                   this.$message.success('添加影视成功!')
                   this.modalVisible = false
                   this.getList()
@@ -501,6 +662,7 @@ export default {
             } else {
               updateMovieInfo(this.movieInfoForm).then(res => {
                 if (res.code === 200) {
+                  this.movieInfoForm.movieActor = this.actorData
                   this.$message.success('修改影视成功!')
                   this.modalVisible = false
                   this.getList()
@@ -517,12 +679,14 @@ export default {
     },
     onSelectChange (selectedRowKeys) {
       this.selectedMovieRowKeys = selectedRowKeys
+      this.movieInfoIds = this.selectedMovieRowKeys
     },
     innerExpandedRowsChange (expandedRows) {
 
     },
     onSelectEpisodesChange (selectedRowKeys) {
       this.selectedEpisodesRowKeys = selectedRowKeys
+      this.episodeIds = this.selectedEpisodesRowKeys
     },
     handleMovieFileRemove (file) {
       const index = this.movieFileList.indexOf(file)
@@ -607,10 +771,12 @@ export default {
       )
     },
     handleEpisodesDelete () {
+      const that = this
       deleteEpisodes(this.episodeIds).then(
         res => {
           if (res.code === 200) {
             this.$message.success('删除成功')
+            that.onSelectEpisodesChange([])
             episodesListForMovie(this.movieInfoForm.id).then(
               res => {
                 if (res.code === 200) {
@@ -621,6 +787,45 @@ export default {
           }
         }
       )
+    },
+    handleActorAdd () {
+      this.actorModalTitle = '添加演职员'
+      this.actorModalVisible = true
+    },
+    handleActorEdit () {
+      // this.movieActorForm.movieId = this.selectedActorIds
+
+    },
+    handleActorDelete () {
+
+    },
+    onSelectActorChange (selectedRowKeys) {
+      this.selectedActorRowKeys = selectedRowKeys
+      this.selectedActorIds = this.selectedActorRowKeys
+    },
+    handleSubmitActor () {
+      this.$refs.movieActorRef.validate(
+        valid => {
+            if (valid) {
+              if (this.movieActorForm.movieId === null || this.movieActorForm.actorId === null) {
+                const actorD = {
+                  actorId: this.movieActorForm.actorId,
+                  posts: this.movieActorForm.posts,
+                  cosplayName: this.movieActorForm.cosplayName,
+                  cosplayPhoto: this.movieActorForm.cosplayPhoto,
+                  name: this.allActor.find((value) => value.id === this.movieActorForm.actorId).name,
+                  photoUrl: this.allActor.find((value) => value.id === this.movieActorForm.actorId).photoUrl
+                }
+                console.log(actorD)
+                this.actorData.push(actorD)
+                this.actorModalVisible = false
+              }
+            }
+        }
+      )
+    },
+    handleCancelActor () {
+      this.actorModalVisible = false
     }
   }
 }

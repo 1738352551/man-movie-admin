@@ -258,8 +258,10 @@ export default {
     },
     removeRole (record) {
       const ids = record.id || this.ids
+      const that = this
       deleteRole(ids).then(res => {
         if (res.code === 200) {
+          that.onSelectChange([])
           this.$message.success('删除角色成功!')
           this.getData()
         }

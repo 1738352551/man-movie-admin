@@ -322,11 +322,13 @@ export default {
   },
   methods: {
     removeUserByIds () {
+      const that = this
       deleteUser(this.selectedRowKeys).then(
         res => {
           if (res.code === 200) {
-            this.getData()
+            that.onSelectChange([])
             this.$message.success('删除用户成功!')
+            this.getData()
           }
         }
       )

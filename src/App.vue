@@ -9,7 +9,6 @@
 <script>
 import { domTitle, setDocumentTitle } from '@/utils/domUtil'
 import { i18nRender } from '@/locales'
-import { axios } from '@/utils/request'
 
 export default {
   data () {
@@ -24,14 +23,6 @@ export default {
 
       return this.$i18n.getLocaleMessage(this.$store.getters.lang).antLocale
     }
-  },
-  created () {
-    const token = 'eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI0NDc5NDQxMjk2ZDk0ODZlODBmOTRiMzEyNjhlNDI1NSIsInN1YiI6IjEiLCJpc3MiOiJjaGVubWFubWFuIiwiaWF0IjoxNjg1ODUzMzIyLCJleHAiOjE2ODU4NTY5MjJ9.ZirQIHZ2gqXpJBlyVwnCVvZ22FRnnVSwRq1Jx--YS4Y'
-    axios.get('/tag/getTag?id=1', { headers: { token } }).then(
-      res => {
-        console.log(res)
-      }
-    )
   }
 }
 </script>
