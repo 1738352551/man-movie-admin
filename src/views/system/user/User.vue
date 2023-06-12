@@ -38,8 +38,8 @@
             <a-col :md="8" :sm="24">
               <a-form-item label="用户状态">
                 <a-select v-model="queryForm.status" value="正常" placeholder="请选择用户状态" default-value="0">
-                  <a-select-option value="0" >正常</a-select-option>
-                  <a-select-option value="1">禁止</a-select-option>
+                  <a-select-option value="1" >正常</a-select-option>
+                  <a-select-option value="0">禁止</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -72,6 +72,9 @@
         :pagination="false"
         :data-source="userData">
         <a slot="username" slot-scope="text">{{ text }}</a>
+        <span slot="gender" slot-scope="text">
+          {{ text ? '女' : '男' }}
+        </span>
         <span slot="avatar" slot-scope="avatar">
           <a-avatar :size="64" :src="avatar"/>
         </span>
@@ -131,7 +134,7 @@
           </a-col>
           <a-col :md="8" :sm="24">
             <a-form-model-item label="性别" prop="gender">
-              <a-select placeholder="请选择用户性别" v-model="form.gender" default-value="0">
+              <a-select placeholder="请选择用户性别" v-model="form.gender" :default-value="'0'">
                 <a-select-option value="0">男</a-select-option>
                 <a-select-option value="1">女</a-select-option>
               </a-select>
@@ -139,7 +142,7 @@
           </a-col>
           <a-col :md="8" :sm="24">
             <a-form-model-item label="用户状态" prop="status">
-              <a-select placeholder="请选择用户状态" v-model="form.status" default-value="0">
+              <a-select placeholder="请选择用户状态" v-model="form.status" :default-value="'0'">
                 <a-select-option value="0">正常</a-select-option>
                 <a-select-option value="1">禁止</a-select-option>
               </a-select>
@@ -150,16 +153,16 @@
           <a-col :md="8" :sm="16">
             <a-form-model-item label="头像" prop="avatar">
               <a-upload
-                name="avatar"
+                name="file"
                 list-type="picture-card"
                 class="avatar-uploader"
-                v-model="form.avatar"
                 :show-upload-list="false"
-                action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+                :action="uploadActionUrl"
                 :before-upload="beforeUploadAvatar"
+                :headers="headers"
                 @change="handleChangeAvatar"
               >
-                <img v-if="avatarImageUrl" :src="avatarImageUrl" alt="avatar" />
+                <img v-if="form.avatar" :src="form.avatar" alt="avatar" style="width: 150px;height: 150px;"/>
                 <div v-else>
                   <a-icon :type="avatarLoading ? 'loading' : 'plus'" />
                   <div class="ant-upload-text">
@@ -186,11 +189,16 @@
 <script>
 import { addUser, updateUser, listPage, getUserById, deleteUser, getUserAsRole } from '@/api/auth/user/user'
 import { getRoleList } from '@/api/auth/role/role'
+import md5 from 'md5'
 
 export default {
   name: 'User',
   data () {
     return {
+      headers: {
+        token: this.$store.getters.token
+      },
+      uploadActionUrl: process.env.VUE_APP_API_BASE_URL + '/file/upload',
       avatarLoading: false,
       avatarImageUrl: '',
       modalTitle: '',
@@ -227,7 +235,8 @@ export default {
           title: '性别',
           dataIndex: 'gender',
           key: 'gender',
-          width: 30
+          width: 30,
+          scopedSlots: { customRender: 'gender' }
         },
         {
           title: '头像',
@@ -288,13 +297,14 @@ export default {
         // 昵称
         nickname: '',
         // 性别
-        gender: null,
+        gender: '0',
         // 用户状态
-        status: null,
+        status: '0',
         // 邮箱
         email: '',
         // 密码
         password: '',
+        avatar: null,
         roles: []
       },
       rules: {
@@ -315,7 +325,6 @@ export default {
   },
   watch: {
     selectedRowKeys (newVal) {
-      this.ids = [...newVal]
       this.selectedEdit = newVal.length !== 1
       this.selectedDelete = !(newVal.length > 0)
     }
@@ -365,13 +374,14 @@ export default {
         // 昵称
         nickname: '',
         // 性别
-        gender: null,
+        gender: '0',
         // 登录状态
         loginStatus: null,
         // 用户状态
-        status: null,
+        status: '0',
         // 邮箱
         email: '',
+        avatar: '',
         // 密码
         password: '',
         roles: []
@@ -398,6 +408,7 @@ export default {
     handleOk () {
       this.$refs.form.validate(valid => {
         if (valid) {
+          this.form.password = md5(this.form.password)
           if (this.form.id === null) {
             addUser(this.form).then(
               res => {
@@ -428,8 +439,13 @@ export default {
     },
     handleAdd () {
       this.resetForm()
-      this.modalTitle = '添加用户'
-      this.modalVisible = true
+      getRoleList().then(
+        res => {
+          this.allRoleListData = res.data
+          this.modalTitle = '添加用户'
+          this.modalVisible = true
+        }
+      )
     },
     handleUpdate (record) {
       this.resetForm()
@@ -438,16 +454,17 @@ export default {
         res => {
           this.form.username = res.data.username
           this.form.nickname = res.data.nickname
-          this.form.gender = res.data.gender
-          this.form.status = res.data.status
+          this.form.gender = res.data.gender.toString()
+          this.form.status = res.data.status.toString()
           this.form.email = res.data.email
+          this.form.avatar = res.data.avatar
           this.form.roles = res.data.roles
           getRoleList().then(
             res => {
               this.allRoleListData = res.data
               getUserAsRole(this.form.id).then(
                 res => {
-                  this.form.roles = res.data
+                  this.form.roles = res.data.map(value => value.toString())
                 }
               )
             }
@@ -458,8 +475,14 @@ export default {
       )
     },
     beforeUploadAvatar (file) {
+      this.avatarLoading = true
     },
     handleChangeAvatar (info) {
+      const everyUploaded = info.fileList.every(current => current.percent === 100)
+      if (everyUploaded) {
+        this.avatarLoading = false
+        this.form.avatar = info.file.response.data.fileUrl
+      }
     }
   }
 }

@@ -16,8 +16,8 @@
           <a-col :md="8" :sm="24">
             <a-form-model-item label="角色状态" prop="status">
               <a-select v-model="queryForm.status" placeholder="请选择角色状态">
-                <a-select-option value="1">正常</a-select-option>
-                <a-select-option value="2">禁止</a-select-option>
+                <a-select-option :value="0">正常</a-select-option>
+                <a-select-option :value="1">禁止</a-select-option>
               </a-select>
             </a-form-model-item>
           </a-col>
@@ -41,6 +41,10 @@
         rowKey="id"
         :pagination="false"
       >
+        <span slot="status" slot-scope="status">
+          <a-tag v-if="status" color="green">正常</a-tag>
+          <a-tag v-if="!status" color="red">禁止</a-tag>
+        </span>
         <span style="display: flex;flex-flow: row;gap: 5px;" slot="action" slot-scope="text, record">
           <a-button type="primary" @click="handleUpdate(record)">编辑</a-button>
           <a-button type="danger" @click="removeRole(record)">删除</a-button>
@@ -67,17 +71,18 @@
           <a-input placeholder="请输入权限标识" v-model="form.roleKey"/>
         </a-form-model-item>
         <a-form-model-item label="角色顺序" pro="orderBy">
-          <a-input-number v-model="form.orderBy" defaultValue="0"/>
+          <a-input-number v-model="form.orderBy" :defaultValue="0"/>
         </a-form-model-item>
         <a-form-model-item label="角色状态" prop="status">
           <a-select placeholder="请选择角色状态" v-model="form.status">
-            <a-select-option value="1">正常</a-select-option>
-            <a-select-option value="2">禁止</a-select-option>
+            <a-select-option :value="0">正常</a-select-option>
+            <a-select-option :value="1">禁止</a-select-option>
           </a-select>
         </a-form-model-item>
         <a-form-model-item label="菜单权限" prop="menus">
           <a-tree
             checkable
+            :selected-keys="checkMenusKey"
             v-model="form.menus"
             :tree-data="treeData"
             :replaceFields="{ title: 'title', children: 'children', key: 'id' }"
@@ -98,6 +103,7 @@ export default {
       selectedEdit: true,
       selectedRemove: true,
       selectedRowKeys: [],
+      checkMenusKey: [],
       modalTitle: '',
       total: 0,
       modalVisible: false,
@@ -124,7 +130,8 @@ export default {
         {
           title: '角色状态',
           key: 'status',
-          dataIndex: 'status'
+          dataIndex: 'status',
+          scopedSlots: { customRender: 'status' }
         },
         {
           title: '操作',
@@ -147,7 +154,7 @@ export default {
         roleKey: undefined,
         status: null,
         orderBy: undefined,
-        menus: undefined
+        menus: []
       }
     }
   },
@@ -164,6 +171,9 @@ export default {
       console.log(this.ids)
       this.selectedEdit = newVal.length !== 1
       this.selectedRemove = !(newVal.length > 0)
+    },
+    checkMenusKey: (newVal) => {
+      console.log(newVal)
     }
   },
   methods: {
@@ -182,7 +192,7 @@ export default {
         roleKey: undefined,
         status: '0',
         orderBy: undefined,
-        menus: undefined
+        menus: []
       }
       // this.$refs.form.resetFields()
     },

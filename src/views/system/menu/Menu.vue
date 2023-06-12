@@ -11,8 +11,8 @@
           <a-col :md="8" :sm="24">
             <a-form-model-item label="菜单状态" prop="status">
               <a-select placeholder="请选择菜单状态" v-model="queryForm.status">
-                <a-select-option value="1">正常</a-select-option>
-                <a-select-option value="2">禁止</a-select-option>
+                <a-select-option :value="0">正常</a-select-option>
+                <a-select-option :value="1">禁止</a-select-option>
               </a-select>
             </a-form-model-item>
           </a-col>
@@ -71,10 +71,10 @@
         </a-form-model-item>
         <a-form-model-item label="菜单类型" prop="type">
           <a-radio-group name="menuType" :default-value="0" v-model="form.type">
-            <a-radio :value="0">
+            <a-radio :value="1">
               菜单
             </a-radio>
-            <a-radio :value="1">
+            <a-radio :value="2">
               按钮
             </a-radio>
           </a-radio-group>
@@ -166,7 +166,7 @@ export default {
       menuData: [],
       queryForm: {
         title: '',
-        status: 1
+        status: 0
       },
       form: {
         type: 0,
@@ -269,6 +269,7 @@ export default {
         res => {
           if (res.code === 200) {
             this.form = res.data
+            this.form.status = res.data.status
             this.modalTitle = '修改菜单'
             this.modalVisible = true
           } else {
